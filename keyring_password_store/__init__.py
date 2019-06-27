@@ -11,7 +11,7 @@ def command(cmd, **kwargs):
     try:
         output = subprocess.check_output(cmd, **kwargs)
     except subprocess.CalledProcessError as exc:
-        print(exc.stdout)
+        sys.stderr.write(exc.stdout.decode('utf8'))
         raise
     return codecs.decode(output, 'utf8')
 
@@ -32,7 +32,13 @@ class PasswordStoreBackend(backend.KeyringBackend):
         command(['pass', 'insert', '-f', self.get_key(servicename, username)], input=inp)
 
     def get_password(self, servicename, username):
-        return command(['pass', self.get_key(servicename, username)])[:-1]
+        try:
+            return command(['pass', self.get_key(servicename, username)])[:-1]
+        except subprocess.CalledProcessError as exc:
+            pattern = b'not in the password store'
+            if pattern in exc.output:
+                return None
+            raise
 
     def delete_password(self, service, username):
         command(['pass', 'rm', self.get_key(service, username)])
