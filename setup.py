@@ -5,10 +5,10 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='keyring_pass',
-    version='0.2.0',
+    version='0.3.0',
     author='Krzysztof Nazarewski',
     author_email='3494992+nazarewk@users.noreply.github.com',
-    description='GNU Pass backend for keyring',
+    description='https://www.passwordstore.org/ backend for https://pypi.org/project/keyring/',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://github.com/nazarewk/keyring_pass',
