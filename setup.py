@@ -1,17 +1,34 @@
 import setuptools
 
-if __name__ == '__main__':
-    setuptools.setup(
-        name='keyring_pass',
-        python_requires='>3.3',
-        version='0.2.0',
-        packages=['keyring_pass'],
-        entry_points={
-            'keyring.backends': [
-                'pass = keyring_pass'
-            ]
-        },
-        install_requires=[
-            'keyring'
+with open('README.md', 'r') as f:
+    long_description = f.read()
+
+setuptools.setup(
+    name='keyring_pass',
+    version='0.2.0',
+    author='Krzysztof Nazarewski',
+    author_email='3494992+nazarewk@users.noreply.github.com',
+    description='GNU Pass backend for keyring',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url='https://github.com/nazarewk/keyring_pass',
+
+    python_requires='>3.3',
+    packages=['keyring_pass'],
+
+    entry_points={
+        'keyring.backends': [
+            'pass = keyring_pass'
         ]
-    )
+    },
+
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+
+    install_requires=[
+        'keyring'
+    ]
+)
