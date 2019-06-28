@@ -1,5 +1,6 @@
+import base64
 import codecs
-import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -22,15 +23,6 @@ def command(cmd, **kwargs):
     return codecs.decode(output, 'utf8')
 
 
-def sha256(value):
-    """
-    :type value: str
-    """
-    m = hashlib.sha256()
-    m.update(value.encode('utf8'))
-    return m.hexdigest()
-
-
 class PasswordStoreBackend(backend.KeyringBackend):
     @properties.ClassProperty
     @classmethod
@@ -42,9 +34,11 @@ class PasswordStoreBackend(backend.KeyringBackend):
         return 1
 
     def get_key(self, service, username):
-        service = sha256(service)
-        username = sha256(username)
-        return '/'.join(('python-keyring', service, username))
+        return os.path.sep.join((
+            'python-keyring',
+            base64.encodestring(service),
+            base64.encodestring(username),
+        ))
 
     def set_password(self, servicename, username, password):
         """
