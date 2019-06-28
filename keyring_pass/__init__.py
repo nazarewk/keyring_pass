@@ -23,6 +23,15 @@ def command(cmd, **kwargs):
     return codecs.decode(output, 'utf8')
 
 
+def b64encode(value):
+    if isinstance(value, str):
+        value = value.encode('utf8')
+
+    encoded = base64.b64encode(value)
+
+    return encoded.decode('utf8')
+
+
 class PasswordStoreBackend(backend.KeyringBackend):
     @properties.ClassProperty
     @classmethod
@@ -36,8 +45,8 @@ class PasswordStoreBackend(backend.KeyringBackend):
     def get_key(self, service, username):
         return os.path.sep.join((
             'python-keyring',
-            base64.encodestring(service),
-            base64.encodestring(username),
+            b64encode(service),
+            b64encode(username),
         ))
 
     def set_password(self, servicename, username, password):
@@ -55,8 +64,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         try:
             ret = command(['pass', 'show', self.get_key(servicename, username)])
         except subprocess.CalledProcessError as exc:
-            pattern = b'not in the password store'
-            if pattern in exc.output:
+            if exc.returncode == 1:
                 return None
             raise
         return ret.splitlines()[0]
