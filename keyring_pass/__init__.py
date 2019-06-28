@@ -1,9 +1,11 @@
 import codecs
+import shutil
 import subprocess
 import sys
 
 import keyring
 from keyring import backend
+from keyring.util import properties
 
 
 def command(cmd, **kwargs):
@@ -11,13 +13,23 @@ def command(cmd, **kwargs):
     try:
         output = subprocess.check_output(cmd, **kwargs)
     except subprocess.CalledProcessError as exc:
+        pattern = b'password store is empty'
+        if pattern in exc.output:
+            raise RuntimeError(exc.output)
         sys.stderr.write(exc.stdout.decode('utf8'))
         raise
     return codecs.decode(output, 'utf8')
 
 
 class PasswordStoreBackend(backend.KeyringBackend):
-    priority = 1
+    @properties.ClassProperty
+    @classmethod
+    def priority(cls):
+        if not shutil.which('pass'):
+            raise RuntimeError('`pass` executable is missing!')
+
+        command(['pass', 'ls'])
+        return 1
 
     def get_key(self, servicename, username):
         return '/'.join(('python-keyring', servicename, username))
@@ -33,12 +45,13 @@ class PasswordStoreBackend(backend.KeyringBackend):
 
     def get_password(self, servicename, username):
         try:
-            return command(['pass', self.get_key(servicename, username)])[:-1]
+            ret = command(['pass', 'show', self.get_key(servicename, username)])
         except subprocess.CalledProcessError as exc:
             pattern = b'not in the password store'
             if pattern in exc.output:
                 return None
             raise
+        return ret.splitlines()[0]
 
     def delete_password(self, service, username):
         command(['pass', 'rm', self.get_key(service, username)])
