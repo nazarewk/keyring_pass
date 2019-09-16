@@ -58,7 +58,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         inp = '%s\n' % password
         inp *= 2
 
-        command(['pass', 'insert', '-f', self.get_key(servicename, username)], input=inp.encode('utf8'))
+        command(['pass', 'insert', '--force', self.get_key(servicename, username)], input=inp.encode('utf8'))
 
     def get_password(self, servicename, username):
         try:
@@ -70,7 +70,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         return ret.splitlines()[0]
 
     def delete_password(self, service, username):
-        command(['pass', 'rm', self.get_key(service, username)])
+        command(['pass', 'rm', '--force', self.get_key(service, username)])
 
 
 if __name__ == '__main__':

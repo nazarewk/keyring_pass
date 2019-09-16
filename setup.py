@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='keyring_pass',
-    version='0.4.3',
+    version='0.5.0',
     author='Krzysztof Nazarewski',
     author_email='3494992+nazarewk@users.noreply.github.com',
     description='https://www.passwordstore.org/ backend for https://pypi.org/project/keyring/',
