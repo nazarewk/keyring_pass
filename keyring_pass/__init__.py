@@ -1,4 +1,3 @@
-import base64
 import codecs
 import os
 import shutil
@@ -23,15 +22,6 @@ def command(cmd, **kwargs):
     return codecs.decode(output, 'utf8')
 
 
-def b64encode(value):
-    if isinstance(value, str):
-        value = value.encode('utf8')
-
-    encoded = base64.b64encode(value)
-
-    return encoded.decode('utf8')
-
-
 class PasswordStoreBackend(backend.KeyringBackend):
     @properties.ClassProperty
     @classmethod
@@ -45,8 +35,8 @@ class PasswordStoreBackend(backend.KeyringBackend):
     def get_key(self, service, username):
         return os.path.sep.join((
             'python-keyring',
-            b64encode(service),
-            b64encode(username),
+            service,
+            username,
         ))
 
     def set_password(self, servicename, username, password):
