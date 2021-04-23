@@ -1,4 +1,5 @@
 import codecs
+import configparser
 import os
 import shutil
 import subprocess
@@ -6,7 +7,7 @@ import sys
 
 import keyring
 from keyring import backend
-from keyring.util import properties
+from keyring.util import properties, platform_ as platform
 
 
 def command(cmd, **kwargs):
@@ -23,6 +24,24 @@ def command(cmd, **kwargs):
 
 
 class PasswordStoreBackend(backend.KeyringBackend):
+    pass_key_prefix = 'python-keyring'
+
+    def __init__(self):
+        super().__init__()
+        self._load_config()
+
+    def _load_config(self):
+        keyring_cfg = os.path.join(platform.config_root(), 'keyringrc.cfg')
+        if not os.path.exists(keyring_cfg):
+            return
+
+        config = configparser.RawConfigParser()
+        config.read(keyring_cfg)
+        try:
+            self.pass_key_prefix = config.get('pass', 'key-prefix')
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            pass
+
     @properties.ClassProperty
     @classmethod
     def priority(cls):
@@ -33,17 +52,13 @@ class PasswordStoreBackend(backend.KeyringBackend):
         return 1
 
     def get_key(self, service, username):
-        return os.path.sep.join((
-            'python-keyring',
+        return os.path.join(
+            self.pass_key_prefix,
             service,
             username,
-        ))
+        )
 
     def set_password(self, servicename, username, password):
-        """
-
-        :type password: str
-        """
         password = password.splitlines()[0]
         inp = '%s\n' % password
         inp *= 2
