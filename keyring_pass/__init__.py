@@ -6,8 +6,9 @@ import subprocess
 import sys
 
 import keyring
+from jaraco.classes import properties
 from keyring import backend
-from keyring.util import properties, platform_ as platform
+from keyring.util import platform_ as platform
 
 
 def command(cmd, **kwargs):
@@ -42,7 +43,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         except (configparser.NoSectionError, configparser.NoOptionError):
             pass
 
-    @properties.ClassProperty
+    @properties.classproperty
     @classmethod
     def priority(cls):
         if not shutil.which('pass'):
