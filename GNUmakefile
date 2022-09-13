@@ -7,8 +7,11 @@ SHELL := $(shell which bash)
 clean:
 	rm -rf build dist || true
 
+# see https://realpython.com/pypi-publish-python-package/#build-your-package
 build: clean
-	python setup.py sdist bdist_wheel
+	python -m build
 
+# see https://realpython.com/pypi-publish-python-package/#upload-your-package
 publish:
+	python -m twine check dist/*
 	python -m twine upload dist/*
