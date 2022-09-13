@@ -30,5 +30,6 @@ setuptools.setup(
 
     install_requires=[
         'keyring',
+        "jaraco.classes",
     ]
 )
