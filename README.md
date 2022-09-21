@@ -19,7 +19,7 @@ You can modify the default `python-keyring` prefix for `pass`, by:
 
 - (for `keyring` version 23.0.0 or higher) setting environment variable `KEYRING_PROPERTY_PASS_KEY_PREFIX`
 
-You can clear the path (store in root), by setting above to `.` or an empty value.
+-yYou can clear the path (start from root), by setting above to `.` or an empty value (`key-prefix=` just).
 
 
 ## Test your setup
@@ -27,6 +27,6 @@ You can clear the path (store in root), by setting above to `.` or an empty valu
 You can check if your setup works end-to-end (creates, reads and deletes a key from password store).
 
 ```shell
-# warning: this will create and delete a key named `test` for "user" `asd` in your password store
+# warning: this will create and delete a key at `<prefix>/test/asd` in your password store
 python -m keyring_pass
 ```
