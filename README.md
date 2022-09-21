@@ -19,7 +19,7 @@ You can modify the default `python-keyring` prefix for `pass`, by:
 
 - (for `keyring` version 23.0.0 or higher) setting environment variable `KEYRING_PROPERTY_PASS_KEY_PREFIX`
 
-- You can clear the path (start from root), by setting above to `.` or an empty value (`key-prefix=` just).
+- You can clear the path (start from root), by setting above to `.` or an empty value (just `key-prefix=` on the line).
 
 
 ## Test your setup
