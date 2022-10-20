@@ -9,9 +9,9 @@ clean:
 
 # see https://realpython.com/pypi-publish-python-package/#build-your-package
 build: clean
-	python -m build
+	poetry build
 
 # see https://realpython.com/pypi-publish-python-package/#upload-your-package
-publish:
-	python -m twine check dist/*
-	python -m twine upload dist/*
+# poetry config http-basic.pypi __token__ pypi-<api-token>
+publish: build
+	poetry publish
