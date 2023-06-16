@@ -11,6 +11,12 @@ from jaraco.classes import properties
 from keyring import backend
 from keyring.util import platform_ as platform
 
+try:
+    from functools import cache
+except ImportError:
+    from functools import lru_cache
+    cache = lru_cache(maxsize=None)
+
 
 def command(cmd, **kwargs):
     kwargs.setdefault("stderr", sys.stderr)
@@ -25,7 +31,7 @@ def command(cmd, **kwargs):
     return codecs.decode(output, "utf8")
 
 
-@functools.cache
+@cache
 def _load_config(
     keyring_cfg=os.path.join(platform.config_root(), "keyringrc.cfg"),
 ):
