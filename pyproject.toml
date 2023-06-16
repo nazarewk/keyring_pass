@@ -15,7 +15,7 @@ classifiers = []
 packages = [{ include = "keyring_pass" }]
 
 [tool.poetry.dependencies]
-python = ">=3.7" # requined by `jaraco.classes`
+python = ">=3.9" # required by `functools.cache`
 keyring = "^23.9.3"
 jaraco-classes = "^3.2.3"
 
