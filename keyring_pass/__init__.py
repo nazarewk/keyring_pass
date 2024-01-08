@@ -105,7 +105,10 @@ class PasswordStoreBackend(backend.KeyringBackend):
     
     def get_credential(self, servicename, username):
         if username:
-            return self.get_password(servicename, username)
+            return credentials.SimpleCredential(
+                username,
+                self.get_password(servicename, username),
+            )
         try:
             servicename = os.path.normpath(servicename)
             service_key = self.get_key(servicename, None)
