@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import codecs
 import configparser
-import functools
 import os
 import re
 import shutil
@@ -17,23 +15,21 @@ try:
     from functools import cache
 except ImportError:
     from functools import lru_cache
+
     cache = lru_cache(maxsize=None)
 
 
-def command(cmd, **kwargs):
+def command(cmd, **kwargs) -> str:
+    kwargs.setdefault("encoding", "utf8")
     kwargs.setdefault("stderr", sys.stderr)
     try:
-        output = subprocess.check_output(cmd,
-                                         text=True,
-                                         encoding="utf8",
-                                         **kwargs)
+        return subprocess.check_output(cmd, **kwargs)
     except subprocess.CalledProcessError as exc:
         pattern = "password store is empty"
         if pattern in exc.output:
             raise RuntimeError(exc.output)
         sys.stderr.write(exc.stdout)
         raise
-    return output
 
 
 @cache
@@ -57,17 +53,19 @@ def _load_config(
 class PasswordStoreBackend(backend.KeyringBackend):
     pass_key_prefix = "python-keyring"
     pass_binary = "pass"
-    pass_exact_service = "True"
+    pass_exact_service = True
 
     INI_OPTIONS = {
         "pass_key_prefix": "key-prefix",
         "pass_binary": "binary",
-        "pass_exact_service": "bool"
+        "pass_exact_service": "exact-service",
     }
 
     def __init__(self):
         for k, v in _load_config().items():
             setattr(self, k, v)
+        if isinstance(self.pass_exact_service, str):
+            self.pass_exact_service = self.pass_exact_service.lower() == "true"
         self.pass_key_prefix = os.path.normpath(self.pass_key_prefix)
         super().__init__()
 
@@ -82,8 +80,11 @@ class PasswordStoreBackend(backend.KeyringBackend):
 
     def get_key(self, service, username):
         service = os.path.normpath(service)
-        path = os.path.join(self.pass_key_prefix, service) \
-            if self.pass_key_prefix else service
+        path = (
+            os.path.join(self.pass_key_prefix, service)
+            if self.pass_key_prefix
+            else service
+        )
         if username:
             path = os.path.join(path, username)
         return path
@@ -100,9 +101,9 @@ class PasswordStoreBackend(backend.KeyringBackend):
                 "--force",
                 self.get_key(servicename, username),
             ],
-            input=inp.encode("utf8"),
+            input=inp,
         )
-    
+
     def get_credential(self, servicename, username):
         if username:
             return credentials.SimpleCredential(
@@ -112,16 +113,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         try:
             servicename = os.path.normpath(servicename)
             service_key = self.get_key(servicename, None)
-            env = os.environ.copy()
-            env.update({"LS_COLORS": "*=00", "TREE_COLORS": "*=00"})
-            output = command(
-                [
-                    self.pass_binary,
-                    "ls",
-                    service_key
-                ],
-                env=env,
-            )
+            output = command([self.pass_binary, "ls", service_key])
         except subprocess.CalledProcessError as exc:
             if exc.returncode == 1:
                 return None
@@ -130,16 +122,20 @@ class PasswordStoreBackend(backend.KeyringBackend):
         # Internally it uses the command tree but does not pass
         # output formatter options (e.g., for json).
         lines = output.splitlines()
-        lines = [ re.sub(r"\x1B\[([0-9]+;)?[0-9]+m", "", line) for line in lines ]
+        lines = [re.sub(r"\x1B\[([0-9]+;)?[0-9]+m", "", line) for line in lines]
 
         # Assumption that output paths must contain leaves.
         # Services and users are entries in our keyring. Thus remove any
         # non-word char from the left.
-        entries = [ re.sub(r"^\W+", "", line) for line in lines ]
+        entries = [re.sub(r"^\W+", "", line) for line in lines]
         # Just in case: Remove empty entries and corresponding lines
-        indents, entries = zip(*[
-            (len(line) - len(entry), entry) for line, entry in zip(lines, entries) if entry
-        ])
+        indents, entries = zip(
+            *[
+                (len(line) - len(entry), entry)
+                for line, entry in zip(lines, entries)
+                if entry
+            ]
+        )
         # The count of removed characters tells us how far elements are indented.
         # Elements with the same count are on the same level.
         # EOF tree is at indent 0 again.
@@ -148,7 +144,9 @@ class PasswordStoreBackend(backend.KeyringBackend):
         # Now to identify the user entries from service keys we must identify
         # which elements do not have further entries further down the structure.
         # This means that the next element is not indented any further.
-        users_ids = [ i for i, j in enumerate(zip(indents[:-1], indents[1:])) if j[0] >= j[1] ]
+        users_ids = [
+            i for i, j in enumerate(zip(indents[:-1], indents[1:])) if j[0] >= j[1]
+        ]
         # A user with the least indent is closest to the specified service path.
         users_ids = sorted(users_ids, key=lambda i: indents[i])
 
@@ -156,7 +154,7 @@ class PasswordStoreBackend(backend.KeyringBackend):
         if users_ids:
             idx = users_ids[0]
             username = entries[idx]
-            # current level of the last added service key 
+            # current level of the last added service key
             branch_indent = indents[idx]
             # last level that can be added
             # so stop there.
@@ -171,22 +169,19 @@ class PasswordStoreBackend(backend.KeyringBackend):
                     # less indented means new service key
                     paths.insert(0, entries[idx])
                     branch_indent = indent
-            
+
             found_service = os.path.join(servicename, *paths) if paths else servicename
 
             if (not self.pass_exact_service) or servicename == found_service:
                 return credentials.SimpleCredential(
-                    username, self.get_password(found_service, username))
+                    username, self.get_password(found_service, username)
+                )
         return None
 
     def get_password(self, servicename, username):
         try:
             ret = command(
-                [
-                    self.pass_binary,
-                    "show",
-                    self.get_key(servicename, username)
-                ]
+                [self.pass_binary, "show", self.get_key(servicename, username)]
             )
         except subprocess.CalledProcessError as exc:
             if exc.returncode == 1:
@@ -204,14 +199,40 @@ if __name__ == "__main__":
     pwd = "zxc"
 
     keyring.set_keyring(PasswordStoreBackend())
+    errors = []
+    print(f"testing with {svc=} {user=} {pwd=}")
 
     try:
         keyring.set_password(svc, user, pwd)
         returned = keyring.get_password(svc, user)
-
+        credential = keyring.get_credential(svc, None)
     finally:
         keyring.delete_password(svc, user)
 
     if returned != pwd:
-        print("{} != {}".format(returned, pwd))
+        errors.append(f"get_password(): {returned=} != {pwd=}")
+    else:
+        print(f"OK: get_password(): matches")
+
+    if not credential:
+        errors.append(f"get_credential() not found ({credential=})")
+    else:
+        print(f"OK: get_credential(): found")
+        if credential.username != user:
+            errors.append(
+                f"get_credential(): {credential.username=} doesn't match {user=}"
+            )
+        else:
+            print(f"OK: get_credential(): username matches")
+
+        if credential.password != pwd:
+            errors.append(
+                f"get_credential(): {credential.password=} doesn't match {pwd=}"
+            )
+        else:
+            print(f"OK: get_credential(): password matches")
+
+    for err in errors:
+        print(f"ERROR: {err}")
+    if errors:
         sys.exit(1)
