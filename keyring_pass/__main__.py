@@ -1,4 +1,8 @@
-from . import * # idk if this is bad practice, but as a quick fix it works _shrug_
+import sys
+
+import keyring
+
+from keyring_pass import PasswordStoreBackend
 svc = "test"
 user = "asd"
 pwd = "zxc"
