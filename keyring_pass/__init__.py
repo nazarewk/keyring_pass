@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import pathlib
 
 import keyring
 from jaraco.classes import properties
@@ -54,6 +55,9 @@ class PasswordStoreBackend(backend.KeyringBackend):
     pass_key_prefix = "python-keyring"
     pass_binary = "pass"
     pass_exact_service = True
+    pass_directory = os.getenv('PASSWORD_STORE_DIR',
+                               os.path.join(
+                                   os.getenv('HOME'), '/.password-store'))
 
     INI_OPTIONS = {
         "pass_key_prefix": "key-prefix",
@@ -69,6 +73,26 @@ class PasswordStoreBackend(backend.KeyringBackend):
         self.pass_key_prefix = os.path.normpath(self.pass_key_prefix)
         super().__init__()
 
+    def _password_key(self, password, *args):
+        try:
+            ret = command(
+                [self.pass_binary, "show", password]
+            )
+        except subprocess.CalledProcessError as exc:
+            if exc.returncode == 1:
+                return None
+            raise
+        for line in ret.splitlines():
+            k = line.split(':')
+            for arg in args:
+                if k[0] == arg:
+                    return k[1]
+        return False
+
+    def _password_login(self, password):
+        return self._password_key(password, 'login', 'user')
+
+
     @properties.classproperty
     def priority(cls):
         binary = _load_config().get("pass_binary", cls.pass_binary)
@@ -79,15 +103,24 @@ class PasswordStoreBackend(backend.KeyringBackend):
         return 1
 
     def get_key(self, service, username):
-        service = os.path.normpath(service)
-        path = (
-            os.path.join(self.pass_key_prefix, service)
-            if self.pass_key_prefix
-            else service
-        )
+        keyring_path = pathlib.Path(
+            os.path.join(self.pass_directory,
+                         self.pass_key_prefix))
         if username:
-            path = os.path.join(path, username)
-        return path
+            key_glob = keyring_path.rglob(
+                os.path.join(service, username + '.gpg'))
+            for key in key_glob:
+                return key.relative_to(self.pass_directory).with_suffix('')
+        key_glob = keyring_path.rglob(service + '.gpg')
+
+        for key in key_glob:
+            key = key.relative_to(self.pass_directory).with_suffix('')
+            if username:
+                p_user = self._password_login(key)
+                if p_user == username: return key
+            return key
+        # Fallback
+        return os.path.join(self.pass_key_prefix, service, username)
 
     def set_password(self, servicename, username, password):
         password = password.splitlines()[0]
